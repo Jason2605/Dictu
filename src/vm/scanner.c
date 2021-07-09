@@ -45,7 +45,6 @@ static char peekNext(Scanner *scanner) {
 static bool match(Scanner *scanner, char expected) {
     if (isAtEnd(scanner)) return false;
     if (*scanner->current != expected) return false;
-
     scanner->current++;
     return true;
 }
@@ -56,7 +55,6 @@ static Token makeToken(Scanner *scanner, TokenType type) {
     token.start = scanner->start;
     token.length = (int) (scanner->current - scanner->start);
     token.line = scanner->line;
-
     return token;
 }
 
@@ -155,6 +153,8 @@ static TokenType identifierType(Scanner *scanner) {
         case 'c':
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
+                    case 'a':
+			return checkKeyword(scanner, 2, 2, "se", TOKEN_CASE);
                     case 'l':
                         return checkKeyword(scanner, 2, 3, "ass", TOKEN_CLASS);
                     case 'o': {
@@ -173,6 +173,12 @@ static TokenType identifierType(Scanner *scanner) {
             }
             break;
         case 'd':
+               if (scanner->current - scanner->start > 3) {
+                            switch (scanner->start[3]) {
+                                case 'a':
+                                    return checkKeyword(scanner, 4, 3, "ult", TOKEN_DEFAULT);
+                            }
+               }
             return checkKeyword(scanner, 1, 2, "ef", TOKEN_DEF);
         case 'e':
             if (scanner->current - scanner->start > 1) {
@@ -236,10 +242,12 @@ static TokenType identifierType(Scanner *scanner) {
         case 's':
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
-                    case 'u':
-                        return checkKeyword(scanner, 2, 3, "per", TOKEN_SUPER);
                     case 't':
                         return checkKeyword(scanner, 2, 4, "atic", TOKEN_STATIC);
+                    case 'u':
+                        return checkKeyword(scanner, 2, 3, "per", TOKEN_SUPER);
+		    case 'w':
+                        return checkKeyword(scanner, 2, 4, "itch", TOKEN_SWITCH);
                 }
             }
             break;

@@ -1400,8 +1400,8 @@ ParseRule rules[] = {
         {NULL,     dot,       PREC_CALL},               // TOKEN_DOT
         {unary,    binary,    PREC_TERM},               // TOKEN_MINUS
         {NULL,     binary,    PREC_TERM},               // TOKEN_PLUS
-        {NULL,     ternary,   PREC_ASSIGNMENT},               // TOKEN_QUESTION
-        {NULL,     chain,   PREC_CHAIN},              // TOKEN_QUESTION_DOT
+        {NULL,     ternary,   PREC_ASSIGNMENT},         // TOKEN_QUESTION
+        {NULL,     chain,     PREC_CHAIN},              // TOKEN_QUESTION_DOT
         {NULL,     NULL,      PREC_NONE},               // TOKEN_PLUS_EQUALS
         {NULL,     NULL,      PREC_NONE},               // TOKEN_MINUS_EQUALS
         {NULL,     NULL,      PREC_NONE},               // TOKEN_MULTIPLY_EQUALS
@@ -1445,7 +1445,10 @@ ParseRule rules[] = {
         {NULL,     NULL,      PREC_NONE},               // TOKEN_IF
         {NULL,     and_,      PREC_AND},                // TOKEN_AND
         {NULL,     NULL,      PREC_NONE},               // TOKEN_ELSE
-        {NULL,     or_,       PREC_OR},                 // TOKEN_OR
+        {NULL,     or_,       PREC_OR},                 // TOKEN_OR               
+        {NULL,	   NULL,      PREC_NONE},               // TOKEN_SWITCH 
+        {NULL,	   NULL,      PREC_NONE},               // TOKEN_CASE
+        {NULL,     NULL,      PREC_NONE},               // TOKEN_DEFUALT
         {NULL,     NULL,      PREC_NONE},               // TOKEN_VAR
         {NULL,     NULL,      PREC_NONE},               // TOKEN_CONST
         {literal,  NULL,      PREC_NONE},               // TOKEN_TRUE
@@ -1889,6 +1892,7 @@ static int getArgCount(uint8_t *code, const ValueArray constants, int ip) {
 
         case OP_DEFINE_OPTIONAL:
         case OP_JUMP:
+        case OP_COMPARE_JUMP:
         case OP_JUMP_IF_NIL:
         case OP_JUMP_IF_FALSE:
         case OP_LOOP:
@@ -2049,7 +2053,6 @@ static void continueStatement(Compiler *compiler) {
     // Jump to top of current innermost loop.
     emitLoop(compiler, compiler->loop->start);
 }
-
 static void ifStatement(Compiler *compiler) {
     consume(compiler, TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
     expression(compiler);
@@ -2072,6 +2075,44 @@ static void ifStatement(Compiler *compiler) {
     if (match(compiler, TOKEN_ELSE)) statement(compiler);
 
     patchJump(compiler, endJump);
+}
+static void switchStatement(Compiler *compiler) {
+    int caseEnds[256];
+    int caseCount = 0;
+    consume(compiler, TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+    expression(compiler);
+    consume(compiler, TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+    consume(compiler, TOKEN_LEFT_BRACE, "Expect '{' before switch body.");
+    consume(compiler, TOKEN_CASE, "Expect atleast one 'case' block.");
+    do {
+        expression(compiler);
+        int compareJump = emitJump(compiler, OP_COMPARE_JUMP);
+        consume(compiler, TOKEN_COLON, "Expect ':' after expression.");
+        statement(compiler);
+        caseEnds[caseCount++] = emitJump(compiler,OP_JUMP);
+        patchJump(compiler, compareJump);
+
+        if (caseCount > 255) {
+            errorAtCurrent(compiler->parser, "Switch statement can not have more than 256 case blocks");
+        }
+
+    } while(match(compiler, TOKEN_CASE));
+
+    if (match(compiler,TOKEN_DEFAULT)){
+        emitByte(compiler, OP_POP); // expression.
+        consume(compiler, TOKEN_COLON, "Expect ':' after expression.");
+        statement(compiler);
+    }
+
+    if (match(compiler,TOKEN_CASE)){
+        error(compiler->parser, "Unexpected case after default");
+    }
+
+    consume(compiler, TOKEN_RIGHT_BRACE, "Expect '}' end  switch body.");
+
+    for (int i = 0; i < caseCount; i++) {
+    	patchJump(compiler, caseEnds[i]);
+    } 
 }
 
 static void withStatement(Compiler *compiler) {
@@ -2311,6 +2352,7 @@ static void synchronize(Parser *parser) {
             case TOKEN_CONST:
             case TOKEN_FOR:
             case TOKEN_IF:
+            case TOKEN_SWITCH:
             case TOKEN_WHILE:
             case TOKEN_BREAK:
             case TOKEN_RETURN:
@@ -2354,6 +2396,8 @@ static void statement(Compiler *compiler) {
         forStatement(compiler);
     } else if (match(compiler, TOKEN_IF)) {
         ifStatement(compiler);
+    } else if (match(compiler, TOKEN_SWITCH)) {
+        switchStatement(compiler);
     } else if (match(compiler, TOKEN_RETURN)) {
         returnStatement(compiler);
     } else if (match(compiler, TOKEN_WITH)) {

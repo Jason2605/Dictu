@@ -1,0 +1,44 @@
+var a=4;
+switch(a){
+case 1:{
+   print("one");
+}
+case 2:{
+   print("two");
+}
+case 3:{
+   print("three");
+}
+case 4:{
+   print("four");
+}
+case 5:{
+   print("five");
+}
+case 6:{
+   print("six");
+}
+}
+//output 4
+
+switch("five"){
+case "one":{
+   print(1);
+}
+case "two":{
+   print(2);
+}
+case "three":{
+   print(3);
+}
+case "four":{
+   print(4);
+}
+case "five":{
+   print(5);
+}
+case "six":{
+   print(6);
+}
+}
+//output 5
