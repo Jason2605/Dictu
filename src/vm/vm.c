@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -2088,4 +2089,47 @@ DictuInterpretResult dictuInterpret(DictuVM *vm, char *moduleName, char *source)
     DictuInterpretResult result = run(vm);
 
     return result;
+}
+
+uint32_t bindRef(DictuVM *vm, Value value) {
+    if (IS_OBJ(value)) {
+        Obj *obj = AS_OBJ(value);
+        Obj *objPrev = obj->prev;
+        Obj *objNext = obj->next;
+
+        // Remove object from the object list.
+        if (objPrev) {
+            vm->objects = objPrev;
+            objPrev->next = objNext;
+            obj->next = NULL;
+            obj->prev = NULL;
+
+            if (objNext) {
+                objNext->prev = objPrev;
+            }
+        } else {
+            vm->objects = objNext;
+            obj->next = NULL;
+
+            if (objNext) {
+                objNext->prev = NULL;
+            }
+        }
+    }
+
+    return registryInsert(vm, &vm->nativeRegistry, value);
+}
+
+void pushRef(DictuVM *vm, uint32_t ref) {
+    push(vm, registryLookup(&vm->nativeRegistry, ref));
+}
+
+void unbindRef(DictuVM *vm, uint32_t ref) {
+    Value value = registryRemove(&vm->nativeRegistry, ref);
+
+    if (IS_OBJ(value)) {
+        Obj *obj = AS_OBJ(value);
+        obj->next = vm->objects;
+        vm->objects = obj;
+    }
 }

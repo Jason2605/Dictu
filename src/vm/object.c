@@ -16,7 +16,15 @@ static Obj *allocateObject(DictuVM *vm, size_t size, ObjType type) {
     object = (Obj *) reallocate(vm, NULL, 0, size);
     object->type = type;
     object->isDark = false;
-    object->next = vm->objects;
+    object->prev = NULL;
+
+    if (vm->objects) {
+        object->next = vm->objects;
+        vm->objects->prev = object;
+    } else {
+        object->next = NULL;
+    }
+
     vm->objects = object;
 
 #ifdef DEBUG_TRACE_GC

@@ -90,6 +90,7 @@ typedef enum {
 struct sObj {
     ObjType type;
     bool isDark;
+    struct sObj *prev;
     struct sObj *next;
 };
 

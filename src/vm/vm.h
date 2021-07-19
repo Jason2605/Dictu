@@ -4,6 +4,7 @@
 #include "object.h"
 #include "table.h"
 #include "value.h"
+#include "registry.h"
 #include "compiler.h"
 
 // TODO: Work out the maximum stack size at compilation time
@@ -39,6 +40,7 @@ struct _vm {
     Table classMethods;
     Table instanceMethods;
     Table resultMethods;
+    Registry nativeRegistry;
     ObjString *initString;
     ObjString *replVar;
     ObjUpvalue *openUpvalues;
